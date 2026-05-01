@@ -144,8 +144,7 @@ h1{
   cursor:pointer;
 }
 
-/* ===== EFFECTS ===== */
-
+/* EFFECTS */
 .float-number{
   position:absolute;
   font-size:22px;
@@ -186,7 +185,6 @@ h1{
   50%{transform:translateX(-50%) scale(1.2);}
   100%{transform:translateX(-50%) scale(1);}
 }
-
 </style>
 </head>
 
@@ -230,7 +228,7 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* GLOBAL STATE */
+/* STATE */
 let count=0;
 let mult=1;
 let auto=false;
@@ -303,7 +301,7 @@ function jump(){
 
 document.body.onclick=jump;
 
-/* FLOAT */
+/* EFFECTS */
 function spawnFloat(value){
   const el=document.createElement("div");
   el.className="float-number";
@@ -315,11 +313,9 @@ function spawnFloat(value){
   el.style.top=(rect.top + window.scrollY)+"px";
 
   document.body.appendChild(el);
-
   setTimeout(()=>el.remove(),800);
 }
 
-/* PARTICLES */
 function spawnParticles(){
   const rect=ball.getBoundingClientRect();
 
@@ -337,7 +333,6 @@ function spawnParticles(){
     p.style.setProperty("--y",y+"px");
 
     document.body.appendChild(p);
-
     setTimeout(()=>p.remove(),500);
   }
 }
@@ -361,8 +356,8 @@ async function save(){
   await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
 
-/* SHOP FIX */
-function updateShop(){
+/* 🔥 FIX NA PROBLEM */
+window.updateShop = function(){
   const buttons=[
     {id:"b2", step:0},
     {id:"bAuto", step:1},
@@ -384,7 +379,15 @@ function updateShop(){
   });
 }
 
-/* AUTOS */
+/* SHOP */
+window.buy2=()=>{ if(step!==0||count<100) return; count-=100; mult=2; step=1; updateShop(); save(); };
+window.buyAuto=()=>{ if(step!==1||count<300) return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
+window.buy3=()=>{ if(step!==2||count<600) return; count-=600; mult=3; step=3; updateShop(); save(); };
+window.buyTurbo=()=>{ if(step!==3||count<1000) return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
+
+window.rebirth=()=>{ if(step!==4||count<10000) return; rebirths++; count=0; mult=1; auto=false; turbo=false; step=0; updateBall(); updateShop(); save(); location.reload(); };
+
+/* AUTO */
 function startAuto(){
   setInterval(()=>{ if(!jumping) jump(); },1500);
 }
@@ -393,23 +396,15 @@ function startTurbo(){
   setInterval(()=>{ if(!jumping) jump(); },700);
 }
 
-/* SHOP ACTIONS */
-window.buy2=()=>{ if(step!==0||count<100) return; count-=100; mult=2; step=1; updateShop(); save(); };
-window.buyAuto=()=>{ if(step!==1||count<300) return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
-window.buy3=()=>{ if(step!==2||count<600) return; count-=600; mult=3; step=3; updateShop(); save(); };
-window.buyTurbo=()=>{ if(step!==3||count<1000) return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
-
-window.rebirth=()=>{ if(step!==4||count<10000) return; rebirths++; count=0; mult=1; auto=false; turbo=false; step=0; updateBall(); updateShop(); save(); location.reload(); };
-
 /* RANK */
 function loadRank(){
   const q=query(collection(db,"users"),orderBy("count","desc"),limit(10));
 
   onSnapshot(q,(snap)=>{
     const list=document.getElementById("list");
-    let i=1;
-
     list.innerHTML="";
+
+    let i=1;
 
     snap.forEach(d=>{
       const data=d.data();
