@@ -15,6 +15,7 @@ body{
   background:radial-gradient(circle,#1e1e2f,#0a0a12);
 }
 
+/* TITLE */
 h1{
   text-align:center;
   font-size:65px;
@@ -72,6 +73,8 @@ h1{
   border:none;
   border-radius:10px;
   font-weight:bold;
+  cursor:pointer;
+  transition:0.2s;
 }
 
 /* RANK */
@@ -85,7 +88,9 @@ h1{
   width:210px;
 }
 
-#rank li{ margin:6px 0; }
+#rank li{
+  margin:6px 0;
+}
 
 /* PROFILE */
 #profile{
@@ -126,6 +131,7 @@ h1{
   color:#00ff88;
   animation:floatUp 0.8s forwards;
   pointer-events:none;
+  z-index:9999;
 }
 
 @keyframes floatUp{
@@ -142,6 +148,7 @@ h1{
   border-radius:50%;
   animation:fly 0.5s forwards;
   pointer-events:none;
+  z-index:9999;
 }
 
 @keyframes fly{
@@ -190,9 +197,7 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* =========================
-   STATE
-========================= */
+/* STATE */
 let count=0,mult=1,auto=false,turbo=false,rebirths=0,step=0;
 let jumping=false;
 let userRef;
@@ -200,24 +205,9 @@ let userRef;
 const ball=document.getElementById("ball");
 const countEl=document.getElementById("count");
 
-/* =========================
-   🔥 FIX: DECLARATIONS FIRST
-========================= */
-let updateShop;
-let updateUI;
-let updateBall;
-let loadRank;
-let startAuto;
-let startTurbo;
-
-/* =========================
-   LOGIN
-========================= */
+/* LOGIN */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    location.href="login.html";
-    return;
-  }
+  if(!user){ location.href="login.html"; return; }
 
   document.body.style.display="block";
   userRef=doc(db,"users",user.uid);
@@ -242,9 +232,7 @@ onAuthStateChanged(auth, async (user)=>{
   if(turbo) startTurbo();
 });
 
-/* =========================
-   LOGOUT
-========================= */
+/* LOGOUT */
 document.getElementById("profile").onclick=()=>{
   document.getElementById("menu").classList.toggle("show");
 };
@@ -254,9 +242,7 @@ window.logout=async()=>{
   location.href="login.html";
 };
 
-/* =========================
-   JUMP
-========================= */
+/* JUMP */
 function jump(){
   if(jumping) return;
   jumping=true;
@@ -279,9 +265,7 @@ function jump(){
 
 document.body.onclick=jump;
 
-/* =========================
-   FLOAT
-========================= */
+/* FLOAT */
 function spawnFloat(v){
   const el=document.createElement("div");
   el.className="float-number";
@@ -296,9 +280,7 @@ function spawnFloat(v){
   setTimeout(()=>el.remove(),800);
 }
 
-/* =========================
-   PARTICLES
-========================= */
+/* PARTICLES */
 function spawnParticles(){
   const r=ball.getBoundingClientRect();
 
@@ -320,59 +302,55 @@ function spawnParticles(){
   }
 }
 
-/* =========================
-   UI
-========================= */
-updateUI=function(){
-  countEl.textContent=count;
-};
+/* UI */
+function updateUI(){ countEl.textContent=count; }
 
-updateBall=function(){
+function updateBall(){
   ball.style.background =
     rebirths===0?"gray":
     rebirths===1?"#4da3ff":
     rebirths===2?"#00ff88":
     rebirths===3?"#ffcc00":"gold";
-};
+}
 
-/* =========================
-   SAVE
-========================= */
+/* SAVE */
 async function save(){
   if(!userRef) return;
   await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
 
-/* =========================
-   SHOP
-========================= */
-updateShop=function(){
-  const b=[
+/* SHOP (🔥 FIXED HIGHLIGHT) */
+function updateShop(){
+  const buttons=[
     {id:"b2",step:0},
     {id:"bAuto",step:1},
     {id:"b3",step:2},
     {id:"bTurbo",step:3}
   ];
-  b.forEach(x=>{
-    const el=document.getElementById(x.id);
-    el.className=(step===x.step)?"active":"locked";
+
+  buttons.forEach(b=>{
+    const el=document.getElementById(b.id);
+    if(!el) return;
+
+    if(step===b.step){
+      el.style.background="linear-gradient(135deg,#ff6600,#ff8800)";
+      el.style.opacity="1";
+      el.style.transform="scale(1.05)";
+      el.style.color="white";
+    }else{
+      el.style.background="gray";
+      el.style.opacity="0.4";
+      el.style.transform="scale(1)";
+      el.style.color="white";
+    }
   });
-};
+}
 
-/* =========================
-   AUTO / TURBO
-========================= */
-startAuto=function(){
-  setInterval(()=>{ if(!jumping) jump(); },1500);
-};
+/* AUTO / TURBO */
+function startAuto(){ setInterval(()=>{ if(!jumping) jump(); },1500); }
+function startTurbo(){ setInterval(()=>{ if(!jumping) jump(); },700); }
 
-startTurbo=function(){
-  setInterval(()=>{ if(!jumping) jump(); },700);
-};
-
-/* =========================
-   SHOP ACTIONS
-========================= */
+/* SHOP ACTIONS */
 window.buy2=()=>{ if(step!==0||count<100)return; count-=100; mult=2; step=1; updateShop(); save(); };
 window.buyAuto=()=>{ if(step!==1||count<300)return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
 window.buy3=()=>{ if(step!==2||count<600)return; count-=600; mult=3; step=3; updateShop(); save(); };
@@ -382,10 +360,8 @@ rebirths++; count=0; mult=1; auto=false; turbo=false; step=0;
 updateBall(); updateShop(); save(); location.reload();
 };
 
-/* =========================
-   RANK
-========================= */
-loadRank=function(){
+/* RANK */
+function loadRank(){
   const q=query(collection(db,"users"),orderBy("count","desc"),limit(10));
 
   onSnapshot(q,(snap)=>{
@@ -405,17 +381,13 @@ loadRank=function(){
       i++;
     });
   });
-};
+}
 
-/* =========================
-   EXPORT FIX (IMPORTANT)
-========================= */
+/* EXPORT FIX */
 window.updateShop = updateShop;
 window.updateUI = updateUI;
 window.updateBall = updateBall;
 window.loadRank = loadRank;
-window.startAuto = startAuto;
-window.startTurbo = startTurbo;
 
 </script>
 
