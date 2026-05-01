@@ -335,6 +335,13 @@ function updateShop(){
     {id:"b3",step:2},
     {id:"bTurbo",step:3}
   ];
+
+  buttons.forEach(b=>{
+    const el=document.getElementById(b.id);
+    if(!el) return;
+
+    el.style.opacity = (step===b.step) ? "1" : "0.4";
+  });
 }
 
   buttons.forEach(b=>{
