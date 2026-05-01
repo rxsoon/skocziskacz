@@ -8,14 +8,13 @@
 body{
   margin:0;
   height:100vh;
+  background:radial-gradient(circle,#1e1e2f,#0a0a12);
   font-family:Arial;
   color:white;
   overflow:hidden;
   display:none;
-  background:radial-gradient(circle,#1e1e2f,#0a0a12);
 }
 
-/* TITLE */
 h1{
   text-align:center;
   font-size:65px;
@@ -73,8 +72,6 @@ h1{
   border:none;
   border-radius:10px;
   font-weight:bold;
-  cursor:pointer;
-  transition:0.2s;
 }
 
 /* RANK */
@@ -112,7 +109,9 @@ h1{
   border-radius:10px;
 }
 
-#menu.show{ display:block; }
+#menu.show{
+  display:block;
+}
 
 #menu button{
   background:red;
@@ -232,9 +231,10 @@ onAuthStateChanged(auth, async (user)=>{
   if(turbo) startTurbo();
 });
 
-/* LOGOUT */
+/* PROFILE */
+const menu=document.getElementById("menu");
 document.getElementById("profile").onclick=()=>{
-  document.getElementById("menu").classList.toggle("show");
+  menu.classList.toggle("show");
 };
 
 window.logout=async()=>{
@@ -247,11 +247,13 @@ function jump(){
   if(jumping) return;
   jumping=true;
 
-  count+=mult+rebirths;
+  const gain = mult + rebirths;
+  count += gain;
+
   updateUI();
   save();
 
-  spawnFloat(mult+rebirths);
+  spawnFloat(gain);
   spawnParticles();
 
   let y=14,up=true;
@@ -265,7 +267,7 @@ function jump(){
 
 document.body.onclick=jump;
 
-/* FLOAT */
+/* ✅ FIXED FLOAT */
 function spawnFloat(v){
   const el=document.createElement("div");
   el.className="float-number";
@@ -273,14 +275,14 @@ function spawnFloat(v){
 
   const r=ball.getBoundingClientRect();
 
-  el.style.left=(r.left+r.width/2)+"px";
-  el.style.top=(r.top+window.scrollY)+"px";
+  el.style.left=(r.left + r.width/2) + "px";
+  el.style.top=(r.top + window.scrollY) + "px";
 
   document.body.appendChild(el);
   setTimeout(()=>el.remove(),800);
 }
 
-/* PARTICLES */
+/* ✅ FIXED PARTICLES */
 function spawnParticles(){
   const r=ball.getBoundingClientRect();
 
@@ -291,8 +293,8 @@ function spawnParticles(){
     const x=(Math.random()-0.5)*200;
     const y=(Math.random()-0.5)*200;
 
-    p.style.left=(r.left+r.width/2)+"px";
-    p.style.top=(r.top+r.height/2+window.scrollY)+"px";
+    p.style.left=(r.left + r.width/2) + "px";
+    p.style.top=(r.top + r.height/2 + window.scrollY) + "px";
 
     p.style.setProperty("--x",x+"px");
     p.style.setProperty("--y",y+"px");
@@ -319,7 +321,7 @@ async function save(){
   await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
 
-/* SHOP (🔥 FIXED HIGHLIGHT) */
+/* SHOP */
 function updateShop(){
   const buttons=[
     {id:"b2",step:0},
@@ -332,17 +334,7 @@ function updateShop(){
     const el=document.getElementById(b.id);
     if(!el) return;
 
-    if(step===b.step){
-      el.style.background="linear-gradient(135deg,#ff6600,#ff8800)";
-      el.style.opacity="1";
-      el.style.transform="scale(1.05)";
-      el.style.color="white";
-    }else{
-      el.style.background="gray";
-      el.style.opacity="0.4";
-      el.style.transform="scale(1)";
-      el.style.color="white";
-    }
+    el.style.opacity = (step===b.step) ? "1" : "0.4";
   });
 }
 
@@ -382,12 +374,6 @@ function loadRank(){
     });
   });
 }
-
-/* EXPORT FIX */
-window.updateShop = updateShop;
-window.updateUI = updateUI;
-window.updateBall = updateBall;
-window.loadRank = loadRank;
 
 </script>
 
