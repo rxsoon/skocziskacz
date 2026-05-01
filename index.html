@@ -69,6 +69,14 @@ h1{
   border:none;
   border-radius:10px;
   font-weight:bold;
+  background:#ff8c00;
+  color:black;
+  transition:0.2s;
+}
+
+.shop button:hover{
+  transform:scale(1.05);
+  background:#ffa733;
 }
 
 #rank{
@@ -296,10 +304,10 @@ function updateUI(){ countEl.textContent=count; }
 function updateBall(){
   const colors = [
     ["#ffffff","#9aa0a6"],
-    ["#4da3ff","#0b2cff"],
+    ["#4da3ff","#1e60ff"],
     ["#00ff88","#00a86b"],
-    ["#ffcc00","#ff7a00"],
-    ["#b84dff","#5a00ff"],
+    ["#ffcc00","#ff8800"],
+    ["#b84dff","#6a00ff"],
     ["#ff4d4d","#b30000"]
   ];
 
@@ -307,12 +315,12 @@ function updateBall(){
   let c = colors[r];
 
   ball.style.background =
-    "radial-gradient(circle at 30% 30%, #ffffffaa, " +
-    c[0] + " 25%, " +
-    c[1] + " 70%, #000000aa 120%)";
+    "radial-gradient(circle at 35% 35%, #ffffff66, " +
+    c[0] + " 40%, " +
+    c[1] + " 100%)";
 
   ball.style.boxShadow =
-    "0 0 15px " + c[0] + ", 0 0 35px " + c[0] + ", 0 0 60px " + c[1];
+    "0 0 12px " + c[0];
 }
 
 async function save(){
