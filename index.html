@@ -8,30 +8,13 @@
 body{
   margin:0;
   height:100vh;
+  background:radial-gradient(circle,#1e1e2f,#0a0a12);
   font-family:Arial;
   color:white;
   overflow:hidden;
   display:none;
-  background:#0a0a12;
 }
 
-/* BACKGROUND */
-#bg{
-  position:fixed;
-  inset:0;
-  z-index:-2;
-  pointer-events:none;
-}
-
-body::after{
-  content:"";
-  position:fixed;
-  inset:0;
-  background:radial-gradient(circle at center, rgba(0,0,0,0.2), rgba(0,0,0,0.85));
-  z-index:-1;
-}
-
-/* UI */
 h1{
   text-align:center;
   font-size:65px;
@@ -56,6 +39,7 @@ h1{
   height:14px;
   background:#999;
   border-radius:12px;
+  position:relative;
 }
 
 .ball{
@@ -88,31 +72,24 @@ h1{
   border:none;
   border-radius:10px;
   font-weight:bold;
-  cursor:pointer;
 }
-
-.active{background:linear-gradient(135deg,#ff6600,#ff8800); color:white;}
-.locked{background:gray; opacity:0.4;}
 
 /* RANK */
 #rank{
   position:absolute;
   left:20px;
   top:20px;
-  background:rgba(0,0,0,0.55);
+  background:rgba(0,0,0,0.45);
   padding:12px;
   border-radius:12px;
-  width:230px;
+  width:210px;
 }
 
 #rank li{
   margin:6px 0;
-  font-size:16px;
-  padding:4px;
-  border-radius:6px;
 }
 
-/* 👤 PROFILE FIX */
+/* PROFILE */
 #profile{
   position:absolute;
   top:10px;
@@ -132,7 +109,6 @@ h1{
   border-radius:10px;
 }
 
-/* ACTIVE MENU */
 #menu.show{
   display:block;
 }
@@ -145,12 +121,40 @@ h1{
   border-radius:8px;
   cursor:pointer;
 }
+
+/* FLOAT + PARTICLES (WRÓCIŁO) */
+.float-number{
+  position:absolute;
+  font-size:22px;
+  font-weight:bold;
+  color:#00ff88;
+  animation:floatUp 0.8s forwards;
+  pointer-events:none;
+}
+
+@keyframes floatUp{
+  0%{opacity:1;}
+  100%{opacity:0; transform:translateY(-80px);}
+}
+
+.particle{
+  position:absolute;
+  width:6px;
+  height:6px;
+  background:white;
+  border-radius:50%;
+  animation:fly 0.5s forwards;
+  pointer-events:none;
+}
+
+@keyframes fly{
+  0%{opacity:1;}
+  100%{opacity:0; transform:translate(var(--x),var(--y));}
+}
 </style>
 </head>
 
 <body>
-
-<canvas id="bg"></canvas>
 
 <div id="profile">👤
 <div id="menu">
@@ -190,21 +194,22 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* STATE */
-let count=0, mult=1, auto=false, turbo=false, rebirths=0, step=0, jumping=false;
+let count=0,mult=1,auto=false,turbo=false,rebirths=0,step=0;
+let jumping=false;
 let userRef;
 
 const ball=document.getElementById("ball");
 const countEl=document.getElementById("count");
 
-/* AUTH */
+/* LOGIN */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){ location.href="login.html"; return; }
 
   document.body.style.display="block";
+
   userRef=doc(db,"users",user.uid);
 
   const snap=await getDoc(userRef);
-
   if(snap.exists()){
     const d=snap.data();
     count=d.count||0;
@@ -224,15 +229,11 @@ onAuthStateChanged(auth, async (user)=>{
   if(turbo) startTurbo();
 });
 
-/* 🔥 LOGOUT FIX */
-const profile=document.getElementById("profile");
+/* LOGOUT FIX */
 const menu=document.getElementById("menu");
+document.getElementById("profile").onclick=()=>menu.classList.toggle("show");
 
-profile.onclick=()=>{
-  menu.classList.toggle("show");
-};
-
-window.logout = async () => {
+window.logout=async()=>{
   await signOut(auth);
   location.href="login.html";
 };
@@ -242,29 +243,59 @@ function jump(){
   if(jumping) return;
   jumping=true;
 
-  count += mult + rebirths;
+  count+=mult+rebirths;
   updateUI();
   save();
 
-  let y=14, up=true;
+  spawnFloat(mult+rebirths);
+  spawnParticles();
+
+  let y=14,up=true;
 
   const anim=setInterval(()=>{
-    if(up){
-      y+=8;
-      if(y>=140) up=false;
-    }else{
-      y-=8;
-      if(y<=14){
-        y=14;
-        clearInterval(anim);
-        jumping=false;
-      }
-    }
+    if(up){ y+=8; if(y>=140) up=false; }
+    else { y-=8; if(y<=14){ y=14; clearInterval(anim); jumping=false; } }
     ball.style.bottom=y+"px";
   },16);
 }
 
 document.body.onclick=jump;
+
+/* FLOAT (WRÓCIŁ +1) */
+function spawnFloat(v){
+  const el=document.createElement("div");
+  el.className="float-number";
+  el.textContent="+"+v;
+
+  const r=ball.getBoundingClientRect();
+  el.style.left=r.left+r.width/2+"px";
+  el.style.top=r.top+"px";
+
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),800);
+}
+
+/* PARTICLES (WRÓCIŁY) */
+function spawnParticles(){
+  const r=ball.getBoundingClientRect();
+
+  for(let i=0;i<10;i++){
+    const p=document.createElement("div");
+    p.className="particle";
+
+    const x=(Math.random()-0.5)*200;
+    const y=(Math.random()-0.5)*200;
+
+    p.style.left=r.left+r.width/2+"px";
+    p.style.top=r.top+r.height/2+"px";
+
+    p.style.setProperty("--x",x+"px");
+    p.style.setProperty("--y",y+"px");
+
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),500);
+  }
+}
 
 /* UI */
 function updateUI(){ countEl.textContent=count; }
@@ -277,14 +308,14 @@ function updateBall(){
     rebirths===3?"#ffcc00":"gold";
 }
 
-/* SAVE */
+/* SAVE FIX */
 async function save(){
   if(!userRef) return;
   await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
 window.save=save;
 
-/* RANK 🔥 FIX + COLORS */
+/* RANK FIX + COLORS */
 function loadRank(){
   const q=query(collection(db,"users"),orderBy("count","desc"),limit(10));
 
@@ -296,18 +327,11 @@ function loadRank(){
     snap.forEach(d=>{
       const li=document.createElement("li");
 
-      let color="#fff";
-      let bg="transparent";
-
-      if(i===1){ color="gold"; bg="rgba(255,215,0,0.1)"; }
-      else if(i===2){ color="silver"; bg="rgba(192,192,192,0.1)"; }
-      else if(i===3){ color="#cd7f32"; bg="rgba(205,127,50,0.1)"; }
-
-      li.style.color=color;
-      li.style.background=bg;
+      if(i===1) li.style.color="gold";
+      else if(i===2) li.style.color="silver";
+      else if(i===3) li.style.color="#cd7f32";
 
       li.textContent=`${i}. ${d.data().name||"Gracz"} - ${d.data().count||0}`;
-
       list.appendChild(li);
       i++;
     });
@@ -317,16 +341,14 @@ window.loadRank=loadRank;
 
 /* SHOP */
 function updateShop(){
-  const buttons=[
+  const b=[
     {id:"b2",step:0},
     {id:"bAuto",step:1},
     {id:"b3",step:2},
     {id:"bTurbo",step:3}
   ];
-
-  buttons.forEach(b=>{
-    const el=document.getElementById(b.id);
-    el.className=(step===b.step)?"active":"locked";
+  b.forEach(x=>{
+    document.getElementById(x.id).className=(step===x.step)?"active":"locked";
   });
 }
 
@@ -334,7 +356,7 @@ function updateShop(){
 function startAuto(){ setInterval(()=>{ if(!jumping) jump(); },1500); }
 function startTurbo(){ setInterval(()=>{ if(!jumping) jump(); },700); }
 
-/* SHOP ACTIONS */
+/* SHOP */
 window.buy2=()=>{ if(step!==0||count<100)return; count-=100; mult=2; step=1; updateShop(); save(); };
 window.buyAuto=()=>{ if(step!==1||count<300)return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
 window.buy3=()=>{ if(step!==2||count<600)return; count-=600; mult=3; step=3; updateShop(); save(); };
@@ -343,50 +365,6 @@ window.rebirth=()=>{ if(step!==4||count<10000)return;
 rebirths++; count=0; mult=1; auto=false; turbo=false; step=0;
 updateBall(); updateShop(); save(); location.reload();
 };
-</script>
-
-<!-- BACKGROUND -->
-<script>
-const canvas=document.getElementById("bg");
-const ctx=canvas.getContext("2d");
-
-canvas.width=innerWidth;
-canvas.height=innerHeight;
-
-const stars=[];
-for(let i=0;i<120;i++){
-  stars.push({
-    x:Math.random()*canvas.width,
-    y:Math.random()*canvas.height,
-    r:Math.random()*2,
-    speed:Math.random()*0.5+0.1
-  });
-}
-
-function animate(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  for(let s of stars){
-    s.y+=s.speed;
-    if(s.y>canvas.height){
-      s.y=0;
-      s.x=Math.random()*canvas.width;
-    }
-
-    ctx.beginPath();
-    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle="white";
-    ctx.fill();
-  }
-
-  requestAnimationFrame(animate);
-}
-animate();
-
-window.addEventListener("resize",()=>{
-  canvas.width=innerWidth;
-  canvas.height=innerHeight;
-});
 </script>
 
 </body>
