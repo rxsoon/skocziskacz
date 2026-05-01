@@ -42,6 +42,7 @@ h1{
   position:relative;
 }
 
+/* 🔧 FIXED BALL (NO TELEPORT BUG) */
 .ball{
   width:85px;
   height:85px;
@@ -51,22 +52,11 @@ h1{
   bottom:14px;
   left:50%;
   transform:translateX(-50%);
+  transition: bottom 0.25s ease-out;
 }
 
-.jump{
-  animation:jump 0.5s ease-out;
-}
-
-@keyframes jump{
-  0%{
-    transform:translateX(-50%) translateY(0);
-  }
-  50%{
-    transform:translateX(-50%) translateY(-140px);
-  }
-  100%{
-    transform:translateX(-50%) translateY(0);
-  }
+.ball.jump-up{
+  bottom:160px;
 }
 
 /* SHOP */
@@ -151,8 +141,6 @@ h1{
   cursor:pointer;
 }
 
-/* ===== DODANE EFEKTY ===== */
-
 /* FLOAT NUMBER */
 .float-number{
   position:absolute;
@@ -184,20 +172,7 @@ h1{
   100%{opacity:0; transform:translate(var(--x), var(--y));}
 }
 
-/* SHAKE */
-.shake{
-  animation:shake 0.12s;
-}
-
-@keyframes shake{
-  0%{transform:translate(0,0);}
-  25%{transform:translate(3px,-3px);}
-  50%{transform:translate(-3px,3px);}
-  75%{transform:translate(3px,3px);}
-  100%{transform:translate(0,0);}
-}
-
-/* PULSE BALL */
+/* 🔧 PULSE FIX (NO CONFLICT) */
 .pulse{
   animation:pulse 0.2s;
 }
@@ -250,6 +225,7 @@ import {
   collection, query, orderBy, limit,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 window.updateUI = updateUI;
 window.updateBall = updateBall;
 window.updateShop = updateShop;
@@ -323,37 +299,30 @@ function jump(){
   updateUI();
   save();
 
-  ball.classList.add("jump");
+  /* FIXED JUMP */
+  ball.classList.add("jump-up","pulse");
 
-  /* PULSE */
-  ball.classList.add("pulse");
-  setTimeout(()=>ball.classList.remove("pulse"),200);
-
-  /* SHAKE */
-  document.body.classList.add("shake");
-  setTimeout(()=>document.body.classList.remove("shake"),200);
+  setTimeout(()=>{
+    ball.classList.remove("jump-up","pulse");
+    jumping=false;
+  },250);
 
   spawnFloat(mult + rebirths);
   spawnParticles();
-
-  setTimeout(()=>{
-    ball.classList.remove("jump");
-    jumping=false;
-  },500);
 }
 
 document.body.onclick=jump;
 
-/* FLOAT NUMBER */
+/* FLOAT */
 function spawnFloat(value){
-  const el = document.createElement("div");
-  el.className = "float-number";
-  el.textContent = `+${value}`;
+  const el=document.createElement("div");
+  el.className="float-number";
+  el.textContent=`+${value}`;
 
-  const rect = ball.getBoundingClientRect();
+  const rect=ball.getBoundingClientRect();
 
-  el.style.left = rect.left + rect.width/2 + "px";
-  el.style.top = rect.top + "px";
+  el.style.left=rect.left+rect.width/2+"px";
+  el.style.top=rect.top+"px";
 
   document.body.appendChild(el);
 
@@ -362,7 +331,7 @@ function spawnFloat(value){
 
 /* PARTICLES */
 function spawnParticles(){
-  const rect = ball.getBoundingClientRect();
+  const rect=ball.getBoundingClientRect();
 
   for(let i=0;i<10;i++){
     const p=document.createElement("div");
@@ -371,8 +340,8 @@ function spawnParticles(){
     const x=(Math.random()-0.5)*200;
     const y=(Math.random()-0.5)*200;
 
-    p.style.left=rect.left + rect.width/2 + "px";
-    p.style.top=rect.top + rect.height/2 + "px";
+    p.style.left=rect.left+rect.width/2+"px";
+    p.style.top=rect.top+rect.height/2+"px";
 
     p.style.setProperty("--x",x+"px");
     p.style.setProperty("--y",y+"px");
@@ -386,10 +355,7 @@ function spawnParticles(){
 /* SAVE */
 async function save(){
   if(!userRef) return;
-
-  await updateDoc(userRef,{
-    count,mult,auto,turbo,rebirths,step
-  });
+  await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
 
 /* UI */
@@ -397,32 +363,32 @@ function updateUI(){
   countEl.textContent=count;
 }
 
-/* BALL */
+/* BALL COLOR */
 function updateBall(){
-  if(rebirths === 0) ball.style.background="gray";
-  else if(rebirths === 1) ball.style.background="#4da3ff";
-  else if(rebirths === 2) ball.style.background="#00ff88";
-  else if(rebirths === 3) ball.style.background="#ffcc00";
-  else if(rebirths === 4) ball.style.background="#ff4d4d";
-  else ball.style.background="gold";
+  ball.style.background =
+    rebirths===0?"gray":
+    rebirths===1?"#4da3ff":
+    rebirths===2?"#00ff88":
+    rebirths===3?"#ffcc00":
+    rebirths===4?"#ff4d4d":"gold";
 }
 
 /* SHOP */
 function updateShop(){
   const buttons=[
-    {id:"b2", step:0},
-    {id:"bAuto", step:1},
-    {id:"b3", step:2},
-    {id:"bTurbo", step:3}
+    {id:"b2",step:0},
+    {id:"bAuto",step:1},
+    {id:"b3",step:2},
+    {id:"bTurbo",step:3}
   ];
 
   buttons.forEach(b=>{
     const el=document.getElementById(b.id);
 
-    if(step === b.step){
+    if(step===b.step){
       el.className="active";
       el.disabled=false;
-    } else {
+    }else{
       el.className="locked";
       el.disabled=true;
     }
@@ -433,27 +399,25 @@ function updateShop(){
 function startAuto(){
   if(autoInterval) return;
 
-  autoInterval=setInterval(()=>{
-    if(!jumping) jump();
-  },1500);
+  autoInterval=setInterval(()=>{ if(!jumping) jump(); },1500);
 }
 
 function startTurbo(){
   if(turboInterval) return;
 
-  turboInterval=setInterval(()=>{
-    if(!jumping) jump();
-  },700);
+  turboInterval=setInterval(()=>{ if(!jumping) jump(); },700);
 }
 
-/* SHOP */
-window.buy2=()=>{ if(step!==0 || count<100) return; count-=100; mult=2; step=1; updateShop(); save(); };
-window.buyAuto=()=>{ if(step!==1 || count<300) return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
-window.buy3=()=>{ if(step!==2 || count<600) return; count-=600; mult=3; step=3; updateShop(); save(); };
-window.buyTurbo=()=>{ if(step!==3 || count<1000) return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
+/* SHOP BUTTONS */
+window.buy2=()=>{ if(step!==0||count<100)return; count-=100; mult=2; step=1; updateShop(); save(); };
+window.buyAuto=()=>{ if(step!==1||count<300)return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
+window.buy3=()=>{ if(step!==2||count<600)return; count-=600; mult=3; step=3; updateShop(); save(); };
+window.buyTurbo=()=>{ if(step!==3||count<1000)return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
 
-/* REBIRTH */
-window.rebirth=()=>{ if(step!==4 || count<10000) return; rebirths++; count=0; mult=1; auto=false; turbo=false; step=0; updateBall(); updateShop(); save(); location.reload(); };
+window.rebirth=()=>{ if(step!==4||count<10000)return;
+rebirths++; count=0; mult=1; auto=false; turbo=false; step=0;
+updateBall(); updateShop(); save(); location.reload();
+};
 
 /* RANK */
 function loadRank(){
@@ -461,29 +425,14 @@ function loadRank(){
 
   onSnapshot(q,(snap)=>{
     const list=document.getElementById("list");
-
     let i=1;
 
     snap.forEach(d=>{
-      const data=d.data();
+      let li=list.children[i-1] || document.createElement("li");
+      list.appendChild(li);
 
-      let li=list.children[i-1];
-
-      if(!li){
-        li=document.createElement("li");
-        list.appendChild(li);
-      }
-
-      let color="white";
-      if(i===1) color="gold";
-      else if(i===2) color="silver";
-      else if(i===3) color="#cd7f32";
-
-      li.style.color=color;
-      li.style.fontWeight="bold";
-
-      li.textContent=`${i}. ${data.name || "Gracz"} - ${data.count || 0}`;
-
+      li.textContent=`${i}. ${d.data().name||"Gracz"} - ${d.data().count||0}`;
+      li.style.color=i===1?"gold":i===2?"silver":i===3?"#cd7f32":"white";
       i++;
     });
   });
@@ -510,14 +459,9 @@ onAuthStateChanged(auth, async (user)=>{
   if(!user) return;
 
   const ip=await getIP();
-
   const userRef=doc(db,"users",user.uid);
 
-  await setDoc(userRef,{
-    ip:ip
-  },{merge:true});
-
-  console.log("IP zapisane:",ip);
+  await setDoc(userRef,{ip:ip},{merge:true});
 });
 </script>
 
