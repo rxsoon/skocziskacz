@@ -13,6 +13,9 @@ body{
   color:white;
   overflow:hidden;
   display:none;
+
+  /* 🔧 FIX: ważne dla float/particles */
+  position:relative;
 }
 
 h1{
@@ -72,6 +75,18 @@ h1{
   border:none;
   border-radius:10px;
   font-weight:bold;
+  cursor:pointer;
+}
+
+.active{
+  background:linear-gradient(135deg,#ff6600,#ff8800);
+  color:white;
+}
+
+.locked{
+  background:gray;
+  opacity:0.4;
+  cursor:not-allowed;
 }
 
 /* RANK */
@@ -87,6 +102,7 @@ h1{
 
 #rank li{
   margin:6px 0;
+  font-size:16px;
 }
 
 /* PROFILE */
@@ -122,7 +138,7 @@ h1{
   cursor:pointer;
 }
 
-/* FLOAT + PARTICLES (WRÓCIŁO) */
+/* FLOAT +1 */
 .float-number{
   position:absolute;
   font-size:22px;
@@ -130,6 +146,7 @@ h1{
   color:#00ff88;
   animation:floatUp 0.8s forwards;
   pointer-events:none;
+  z-index:9999;
 }
 
 @keyframes floatUp{
@@ -137,6 +154,7 @@ h1{
   100%{opacity:0; transform:translateY(-80px);}
 }
 
+/* PARTICLES */
 .particle{
   position:absolute;
   width:6px;
@@ -145,6 +163,7 @@ h1{
   border-radius:50%;
   animation:fly 0.5s forwards;
   pointer-events:none;
+  z-index:9999;
 }
 
 @keyframes fly{
@@ -206,10 +225,10 @@ onAuthStateChanged(auth, async (user)=>{
   if(!user){ location.href="login.html"; return; }
 
   document.body.style.display="block";
-
   userRef=doc(db,"users",user.uid);
 
   const snap=await getDoc(userRef);
+
   if(snap.exists()){
     const d=snap.data();
     count=d.count||0;
@@ -229,9 +248,10 @@ onAuthStateChanged(auth, async (user)=>{
   if(turbo) startTurbo();
 });
 
-/* LOGOUT FIX */
-const menu=document.getElementById("menu");
-document.getElementById("profile").onclick=()=>menu.classList.toggle("show");
+/* LOGOUT */
+document.getElementById("profile").onclick=()=>{
+  document.getElementById("menu").classList.toggle("show");
+};
 
 window.logout=async()=>{
   await signOut(auth);
@@ -261,21 +281,22 @@ function jump(){
 
 document.body.onclick=jump;
 
-/* FLOAT (WRÓCIŁ +1) */
+/* 🔧 FIXED FLOAT */
 function spawnFloat(v){
   const el=document.createElement("div");
   el.className="float-number";
   el.textContent="+"+v;
 
   const r=ball.getBoundingClientRect();
-  el.style.left=r.left+r.width/2+"px";
-  el.style.top=r.top+"px";
+
+  el.style.left=(r.left+r.width/2)+"px";
+  el.style.top=(r.top+window.scrollY)+"px";
 
   document.body.appendChild(el);
   setTimeout(()=>el.remove(),800);
 }
 
-/* PARTICLES (WRÓCIŁY) */
+/* 🔧 FIXED PARTICLES */
 function spawnParticles(){
   const r=ball.getBoundingClientRect();
 
@@ -286,8 +307,8 @@ function spawnParticles(){
     const x=(Math.random()-0.5)*200;
     const y=(Math.random()-0.5)*200;
 
-    p.style.left=r.left+r.width/2+"px";
-    p.style.top=r.top+r.height/2+"px";
+    p.style.left=(r.left+r.width/2)+"px";
+    p.style.top=(r.top+r.height/2+window.scrollY)+"px";
 
     p.style.setProperty("--x",x+"px");
     p.style.setProperty("--y",y+"px");
@@ -308,14 +329,13 @@ function updateBall(){
     rebirths===3?"#ffcc00":"gold";
 }
 
-/* SAVE FIX */
+/* SAVE */
 async function save(){
   if(!userRef) return;
   await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
-window.save=save;
 
-/* RANK FIX + COLORS */
+/* RANK */
 function loadRank(){
   const q=query(collection(db,"users"),orderBy("count","desc"),limit(10));
 
@@ -337,34 +357,6 @@ function loadRank(){
     });
   });
 }
-window.loadRank=loadRank;
-
-/* SHOP */
-function updateShop(){
-  const b=[
-    {id:"b2",step:0},
-    {id:"bAuto",step:1},
-    {id:"b3",step:2},
-    {id:"bTurbo",step:3}
-  ];
-  b.forEach(x=>{
-    document.getElementById(x.id).className=(step===x.step)?"active":"locked";
-  });
-}
-
-/* AUTO */
-function startAuto(){ setInterval(()=>{ if(!jumping) jump(); },1500); }
-function startTurbo(){ setInterval(()=>{ if(!jumping) jump(); },700); }
-
-/* SHOP */
-window.buy2=()=>{ if(step!==0||count<100)return; count-=100; mult=2; step=1; updateShop(); save(); };
-window.buyAuto=()=>{ if(step!==1||count<300)return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
-window.buy3=()=>{ if(step!==2||count<600)return; count-=600; mult=3; step=3; updateShop(); save(); };
-window.buyTurbo=()=>{ if(step!==3||count<1000)return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
-window.rebirth=()=>{ if(step!==4||count<10000)return;
-rebirths++; count=0; mult=1; auto=false; turbo=false; step=0;
-updateBall(); updateShop(); save(); location.reload();
-};
 </script>
 
 </body>
