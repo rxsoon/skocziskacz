@@ -242,6 +242,12 @@ import {
   collection, query, orderBy, limit,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+window.updateUI = updateUI;
+window.updateBall = updateBall;
+window.updateShop = updateShop;
+window.loadRank = loadRank;
+window.startAuto = startAuto;
+window.startTurbo = startTurbo;
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
