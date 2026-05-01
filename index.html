@@ -295,15 +295,31 @@ function updateUI(){ countEl.textContent=count; }
 
 function updateBall(){
   const colors = [
-    ["#666","#999"],
-    ["#4da3ff","#1e60ff"],
-    ["#00ff88","#00b36b"],
-    ["#ffcc00","#ff8800"],
-    ["#b84dff","#6a00ff"],
-    ["#ff4d4d","#ff0000"],
-    ["#00e5ff","#0066ff"],
-    ["#ff66cc","#9900ff"]
+    ["#ffffff", "#9aa0a6"],   // basic
+    ["#4da3ff", "#0b2cff"],   // blue neon
+    ["#00ff88", "#00a86b"],   // green neon
+    ["#ffcc00", "#ff7a00"],   // gold fire
+    ["#b84dff", "#5a00ff"],   // purple neon
+    ["#ff4d4d", "#b30000"],   // red fire
+    ["#00e5ff", "#003cff"],   // cyan electric
+    ["#ff66cc", "#ff00ff"],   // pink neon
+    ["#00ffcc", "#006666"],   // aqua glow
+    ["#ff9966", "#ff3300"]    // lava
   ];
+
+  let r = rebirths % colors.length;
+  let c = colors[r];
+
+  ball.style.background = `
+    radial-gradient(circle at 30% 30%, #ffffffaa, ${c[0]} 25%, ${c[1]} 70%, #000000aa 120%)
+  `;
+
+  ball.style.boxShadow = `
+    0 0 15px ${c[0]},
+    0 0 35px ${c[0]},
+    0 0 60px ${c[1]}
+  `;
+}
 
   let r = rebirths % colors.length;
   let c = colors[r];
