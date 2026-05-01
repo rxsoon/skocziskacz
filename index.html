@@ -15,7 +15,7 @@ body{
   background:#0a0a12;
 }
 
-/* 🎨 CANVAS BACKGROUND */
+/* BACKGROUND CANVAS */
 #bg{
   position:fixed;
   top:0;
@@ -26,19 +26,15 @@ body{
   pointer-events:none;
 }
 
-/* 🌫 fog */
 body::after{
   content:"";
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:radial-gradient(circle at center, rgba(0,0,0,0.2), rgba(0,0,0,0.85));
   z-index:-1;
-  pointer-events:none;
 }
 
+/* UI */
 h1{
   text-align:center;
   font-size:65px;
@@ -120,35 +116,36 @@ h1{
   width:210px;
 }
 
-/* FLOAT */
-.float-number{
+/* PROFILE */
+#profile{
   position:absolute;
-  font-size:22px;
-  font-weight:bold;
-  color:#00ff88;
-  pointer-events:none;
-  animation:floatUp 0.8s ease-out forwards;
+  top:10px;
+  right:10px;
+  font-size:28px;
+  cursor:pointer;
+  z-index:999;
 }
 
-@keyframes floatUp{
-  0%{opacity:1;}
-  100%{opacity:0; transform:translateY(-80px);}
-}
-
-/* PARTICLES */
-.particle{
+#menu{
+  display:none;
   position:absolute;
-  width:6px;
-  height:6px;
-  border-radius:50%;
-  background:white;
-  pointer-events:none;
-  animation:fly 0.5s linear forwards;
+  top:35px;
+  right:0;
+  background:black;
+  padding:8px;
+  border-radius:10px;
 }
 
-@keyframes fly{
-  0%{opacity:1;}
-  100%{opacity:0; transform:translate(var(--x), var(--y));}
+#profile:hover #menu{
+  display:block;
+}
+
+#menu button{
+  background:red;
+  border:none;
+  color:white;
+  padding:8px;
+  border-radius:8px;
 }
 </style>
 </head>
@@ -195,6 +192,19 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+/* STATE */
+let count=0;
+let mult=1;
+let auto=false;
+let turbo=false;
+let rebirths=0;
+let step=0;
+let jumping=false;
+let userRef;
+
+const ball=document.getElementById("ball");
+const countEl=document.getElementById("count");
+
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
@@ -210,7 +220,6 @@ onAuthStateChanged(auth, async (user)=>{
 
   if(snap.exists()){
     const d=snap.data();
-
     count=d.count||0;
     mult=d.mult||1;
     auto=d.auto||false;
@@ -228,22 +237,15 @@ onAuthStateChanged(auth, async (user)=>{
   if(turbo) startTurbo();
 });
 
-let count=0;
-let mult=1;
-let auto=false;
-let turbo=false;
-let rebirths=0;
-let step=0;
-let jumping=false;
-let userRef;
+/* LOGOUT */
+window.logout = async () => {
+  await signOut(auth);
+  location.href="login.html";
+};
 
-const ball=document.getElementById("ball");
-const countEl=document.getElementById("count");
-
-/* SKOK */
+/* JUMP */
 function jump(){
   if(jumping) return;
-
   jumping=true;
 
   count += mult + rebirths;
@@ -254,7 +256,6 @@ function jump(){
   let up=true;
 
   const anim=setInterval(()=>{
-
     if(up){
       y+=8;
       if(y>=140) up=false;
@@ -268,52 +269,10 @@ function jump(){
     }
 
     ball.style.bottom=y+"px";
-
   },16);
-
-  spawnFloat(mult + rebirths);
-  spawnParticles();
 }
 
 document.body.onclick=jump;
-
-/* FLOAT */
-function spawnFloat(value){
-  const el=document.createElement("div");
-  el.className="float-number";
-  el.textContent=`+${value}`;
-
-  const rect=ball.getBoundingClientRect();
-
-  el.style.left=rect.left+rect.width/2+"px";
-  el.style.top=rect.top+"px";
-
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(),800);
-}
-
-/* PARTICLES */
-function spawnParticles(){
-  const rect=ball.getBoundingClientRect();
-
-  for(let i=0;i<10;i++){
-    const p=document.createElement("div");
-    p.className="particle";
-
-    const x=(Math.random()-0.5)*200;
-    const y=(Math.random()-0.5)*200;
-
-    p.style.left=rect.left+rect.width/2+"px";
-    p.style.top=rect.top+rect.height/2+"px";
-
-    p.style.setProperty("--x",x+"px");
-    p.style.setProperty("--y",y+"px");
-
-    document.body.appendChild(p);
-
-    setTimeout(()=>p.remove(),500);
-  }
-}
 
 /* UI */
 function updateUI(){
@@ -325,15 +284,34 @@ function updateBall(){
     rebirths===0?"gray":
     rebirths===1?"#4da3ff":
     rebirths===2?"#00ff88":
-    rebirths===3?"#ffcc00":
-    rebirths===4?"#ff4d4d":"gold";
+    rebirths===3?"#ffcc00":"gold";
 }
 
-/* SAVE */
+/* SAVE FIX */
 async function save(){
   if(!userRef) return;
   await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
+window.save = save;
+
+/* RANK FIX */
+function loadRank(){
+  const q=query(collection(db,"users"),orderBy("count","desc"),limit(10));
+
+  onSnapshot(q,(snap)=>{
+    const list=document.getElementById("list");
+    list.innerHTML="";
+
+    let i=1;
+    snap.forEach(d=>{
+      const li=document.createElement("li");
+      li.textContent=`${i}. ${d.data().name||"Gracz"} - ${d.data().count||0}`;
+      list.appendChild(li);
+      i++;
+    });
+  });
+}
+window.loadRank = loadRank;
 
 /* SHOP */
 function updateShop(){
@@ -346,44 +324,19 @@ function updateShop(){
 
   buttons.forEach(b=>{
     const el=document.getElementById(b.id);
-
-    if(step===b.step){
-      el.className="active";
-      el.disabled=false;
-    }else{
-      el.className="locked";
-      el.disabled=true;
-    }
+    el.className = (step===b.step) ? "active" : "locked";
   });
 }
 
+/* AUTO */
 function startAuto(){
   setInterval(()=>{ if(!jumping) jump(); },1500);
 }
-
 function startTurbo(){
   setInterval(()=>{ if(!jumping) jump(); },700);
 }
 
-/* RANK */
-function loadRank(){
-  const q=query(collection(db,"users"),orderBy("count","desc"),limit(10));
-
-  onSnapshot(q,(snap)=>{
-    const list=document.getElementById("list");
-    let i=1;
-
-    snap.forEach(d=>{
-      let li=list.children[i-1] || document.createElement("li");
-      list.appendChild(li);
-
-      li.textContent=`${i}. ${d.data().name||"Gracz"} - ${d.data().count||0}`;
-      i++;
-    });
-  });
-}
-
-/* SHOP BUTTONS */
+/* SHOP ACTIONS */
 window.buy2=()=>{ if(step!==0||count<100)return; count-=100; mult=2; step=1; updateShop(); save(); };
 window.buyAuto=()=>{ if(step!==1||count<300)return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
 window.buy3=()=>{ if(step!==2||count<600)return; count-=600; mult=3; step=3; updateShop(); save(); };
@@ -394,7 +347,7 @@ updateBall(); updateShop(); save(); location.reload();
 };
 </script>
 
-<!-- 🌌 BACKGROUND STARS -->
+<!-- 🌌 BACKGROUND -->
 <script>
 const canvas=document.getElementById("bg");
 const ctx=canvas.getContext("2d");
@@ -426,7 +379,7 @@ function animate(){
 
     ctx.beginPath();
     ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle="rgba(255,255,255,0.6)";
+    ctx.fillStyle="white";
     ctx.fill();
   }
 
