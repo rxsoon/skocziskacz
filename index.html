@@ -142,6 +142,64 @@ h1{
   border-radius:8px;
   cursor:pointer;
 }
+
+/* ===== DODANE EFEKTY ===== */
+
+/* FLOAT NUMBER */
+.float-number{
+  position:absolute;
+  font-size:22px;
+  font-weight:bold;
+  color:#00ff88;
+  pointer-events:none;
+  animation:floatUp 0.8s ease-out forwards;
+}
+
+@keyframes floatUp{
+  0%{opacity:1; transform:translateY(0);}
+  100%{opacity:0; transform:translateY(-80px);}
+}
+
+/* PARTICLES */
+.particle{
+  position:absolute;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:white;
+  pointer-events:none;
+  animation:fly 0.5s linear forwards;
+}
+
+@keyframes fly{
+  0%{opacity:1; transform:translate(0,0);}
+  100%{opacity:0; transform:translate(var(--x), var(--y));}
+}
+
+/* SHAKE */
+.shake{
+  animation:shake 0.2s;
+}
+
+@keyframes shake{
+  0%{transform:translate(0,0);}
+  25%{transform:translate(3px,-3px);}
+  50%{transform:translate(-3px,3px);}
+  75%{transform:translate(3px,3px);}
+  100%{transform:translate(0,0);}
+}
+
+/* PULSE BALL */
+.pulse{
+  animation:pulse 0.2s;
+}
+
+@keyframes pulse{
+  0%{transform:translateX(-50%) scale(1);}
+  50%{transform:translateX(-50%) scale(1.2);}
+  100%{transform:translateX(-50%) scale(1);}
+}
+
 </style>
 </head>
 
@@ -253,6 +311,17 @@ function jump(){
 
   ball.classList.add("jump");
 
+  /* PULSE */
+  ball.classList.add("pulse");
+  setTimeout(()=>ball.classList.remove("pulse"),200);
+
+  /* SHAKE */
+  document.body.classList.add("shake");
+  setTimeout(()=>document.body.classList.remove("shake"),200);
+
+  spawnFloat(mult + rebirths);
+  spawnParticles();
+
   setTimeout(()=>{
     ball.classList.remove("jump");
     jumping=false;
@@ -260,6 +329,45 @@ function jump(){
 }
 
 document.body.onclick=jump;
+
+/* FLOAT NUMBER */
+function spawnFloat(value){
+  const el = document.createElement("div");
+  el.className = "float-number";
+  el.textContent = `+${value}`;
+
+  const rect = ball.getBoundingClientRect();
+
+  el.style.left = rect.left + rect.width/2 + "px";
+  el.style.top = rect.top + "px";
+
+  document.body.appendChild(el);
+
+  setTimeout(()=>el.remove(),800);
+}
+
+/* PARTICLES */
+function spawnParticles(){
+  const rect = ball.getBoundingClientRect();
+
+  for(let i=0;i<10;i++){
+    const p=document.createElement("div");
+    p.className="particle";
+
+    const x=(Math.random()-0.5)*200;
+    const y=(Math.random()-0.5)*200;
+
+    p.style.left=rect.left + rect.width/2 + "px";
+    p.style.top=rect.top + rect.height/2 + "px";
+
+    p.style.setProperty("--x",x+"px");
+    p.style.setProperty("--y",y+"px");
+
+    document.body.appendChild(p);
+
+    setTimeout(()=>p.remove(),500);
+  }
+}
 
 /* SAVE */
 async function save(){
@@ -345,17 +453,10 @@ function loadRank(){
     snap.forEach(d=>{
       const data=d.data();
 
-      let li = list.children[i-1];
+      let li=list.children[i-1];
 
       if(!li){
         li=document.createElement("li");
-        li.style.opacity=0;
-
-        setTimeout(()=>{
-          li.style.transition="0.3s";
-          li.style.opacity=1;
-        },10);
-
         list.appendChild(li);
       }
 
@@ -367,7 +468,7 @@ function loadRank(){
       li.style.color=color;
       li.style.fontWeight="bold";
 
-      li.textContent = `${i}. ${data.name || "Gracz"} - ${data.count || 0}`;
+      li.textContent=`${i}. ${data.name || "Gracz"} - ${data.count || 0}`;
 
       i++;
     });
@@ -375,7 +476,7 @@ function loadRank(){
 }
 </script>
 
-/* IP bans in progress */
+<!-- IP SYSTEM -->
 <script type="module">
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -383,8 +484,8 @@ import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase
 
 async function getIP(){
   try{
-    const res = await fetch("https://api.ipify.org?format=json");
-    const data = await res.json();
+    const res=await fetch("https://api.ipify.org?format=json");
+    const data=await res.json();
     return data.ip;
   }catch(e){
     return "unknown";
@@ -394,15 +495,15 @@ async function getIP(){
 onAuthStateChanged(auth, async (user)=>{
   if(!user) return;
 
-  const ip = await getIP();
+  const ip=await getIP();
 
-  const userRef = doc(db,"users",user.uid);
+  const userRef=doc(db,"users",user.uid);
 
   await setDoc(userRef,{
-    ip: ip
-  }, { merge: true });
+    ip:ip
+  },{merge:true});
 
-  console.log("IP zapisane:", ip);
+  console.log("IP zapisane:",ip);
 });
 </script>
 
