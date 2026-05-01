@@ -71,7 +71,6 @@ h1{
   font-weight:bold;
   background:#ff8c00;
   color:black;
-  cursor:pointer;
 }
 
 #rank{
@@ -122,20 +121,10 @@ h1{
 
 <script type="module">
 import { auth, db } from "./firebase.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  collection,
-  query,
-  orderBy,
-  limit,
+  doc, getDoc, setDoc, updateDoc,
+  collection, query, orderBy, limit,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -170,11 +159,11 @@ onAuthStateChanged(auth, async (user)=>{
   updateBall();
   loadRank();
 
-  getIP(); // 🔥 FIXED IP
+  getIP_SAFE(); // 🔥 FIX
 });
 
-/* 🔥 IP FIX (NIE RESETUJE DANYCH) */
-async function getIP(){
+/* 🔥 IP SAFE (NIE RESETUJE GRY + DODAJE BRAKUJĄCE POLA) */
+async function getIP_SAFE(){
   try{
     const res = await fetch("https://api.ipify.org?format=json");
     const data = await res.json();
@@ -199,10 +188,8 @@ async function getIP(){
       });
     }
 
-    console.log("IP saved:", data.ip);
-
   }catch(e){
-    console.log("IP error (ignored)");
+    console.log("IP error ignored");
   }
 }
 
@@ -233,7 +220,7 @@ function updateUI(){
   countEl.textContent=count;
 }
 
-/* BALL COLORS */
+/* BALL */
 function updateBall(){
   const colors=[
     ["#ffffff","#9aa0a6"],
@@ -252,7 +239,7 @@ function updateBall(){
   ball.style.boxShadow="0 0 12px "+c[0];
 }
 
-/* SAVE SAFE */
+/* SAFE SAVE */
 async function save(){
   if(!userRef) return;
 
@@ -268,9 +255,9 @@ async function save(){
 
 /* SHOP */
 window.buy2=()=>{ if(count<100)return; count-=100; mult=2; step=1; save(); };
-window.buyAuto=()=>{ if(count<300)return; count-=300; auto=true; step=2; startAuto(); save(); };
+window.buyAuto=()=>{ if(count<300)return; count-=300; auto=true; step=2; save(); startAuto(); };
 window.buy3=()=>{ if(count<600)return; count-=600; mult=3; step=3; save(); };
-window.buyTurbo=()=>{ if(count<1000)return; count-=1000; turbo=true; step=4; startTurbo(); save(); };
+window.buyTurbo=()=>{ if(count<1000)return; count-=1000; turbo=true; step=4; save(); startTurbo(); };
 
 window.rebirth=()=>{
 if(count<10000)return;
