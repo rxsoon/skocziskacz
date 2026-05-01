@@ -12,53 +12,42 @@ body{
   color:white;
   overflow:hidden;
   display:none;
-
-  /* 🌈 animowane tło */
-  background:linear-gradient(-45deg,#0a0a12,#1e1e2f,#050510,#0d0d1a);
-  background-size:400% 400%;
-  animation:bgMove 12s ease infinite;
+  background:#0a0a12;
 }
 
-@keyframes bgMove{
-  0%{background-position:0% 50%;}
-  50%{background-position:100% 50%;}
-  100%{background-position:0% 50%;}
-}
-
-/* 🌌 STARS */
-body::before{
-  content:"";
+/* 🎨 CANVAS BACKGROUND */
+#bg{
   position:fixed;
-  width:200%;
-  height:200%;
-  background:
-    radial-gradient(2px 2px at 20px 30px, white, transparent),
-    radial-gradient(1px 1px at 120px 220px, white, transparent),
-    radial-gradient(1px 1px at 300px 400px, white, transparent),
-    radial-gradient(2px 2px at 500px 100px, white, transparent);
-  background-size:600px 600px;
-  animation:stars 80s linear infinite;
-  opacity:0.35;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:-2;
   pointer-events:none;
 }
 
-@keyframes stars{
-  from{transform:translateY(0);}
-  to{transform:translateY(-600px);}
+/* 🌫 fog */
+body::after{
+  content:"";
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:radial-gradient(circle at center, rgba(0,0,0,0.2), rgba(0,0,0,0.85));
+  z-index:-1;
+  pointer-events:none;
 }
 
-/* UI */
 h1{
   text-align:center;
   font-size:65px;
   margin-top:20px;
-  text-shadow:0 0 20px rgba(255,255,255,0.3);
 }
 
 #count{
   text-align:center;
   font-size:45px;
-  text-shadow:0 0 10px rgba(0,255,150,0.4);
 }
 
 /* GAME */
@@ -72,26 +61,20 @@ h1{
 .ground{
   width:460px;
   height:14px;
-  background:#888;
+  background:#999;
   border-radius:12px;
-  box-shadow:0 0 20px rgba(255,255,255,0.1);
   position:relative;
 }
 
-/* ✨ KULKA NEON */
 .ball{
   width:85px;
   height:85px;
   border-radius:50%;
+  background:gray;
   position:absolute;
   bottom:14px;
   left:50%;
   transform:translateX(-50%);
-  background:gray;
-
-  box-shadow:
-    0 0 20px rgba(255,255,255,0.2),
-    0 0 40px rgba(0,255,150,0.15);
 }
 
 /* SHOP */
@@ -167,30 +150,15 @@ h1{
   0%{opacity:1;}
   100%{opacity:0; transform:translate(var(--x), var(--y));}
 }
-
-/* 🔥 TRAIL */
-.trail{
-  position:absolute;
-  width:18px;
-  height:18px;
-  border-radius:50%;
-  background:rgba(0,255,150,0.4);
-  filter:blur(2px);
-  pointer-events:none;
-  animation:trailFade 0.4s linear forwards;
-}
-
-@keyframes trailFade{
-  0%{opacity:1;}
-  100%{opacity:0; transform:scale(0.3);}
-}
-
 </style>
 </head>
 
 <body>
 
-<div id="profile">👤
+<canvas id="bg"></canvas>
+
+<div id="profile">
+👤
 <div id="menu">
 <button onclick="logout()">Wyloguj</button>
 </div>
@@ -260,21 +228,19 @@ onAuthStateChanged(auth, async (user)=>{
   if(turbo) startTurbo();
 });
 
-/* GAME */
 let count=0;
 let mult=1;
 let auto=false;
 let turbo=false;
 let rebirths=0;
 let step=0;
-
 let jumping=false;
 let userRef;
 
 const ball=document.getElementById("ball");
 const countEl=document.getElementById("count");
 
-/* 🚀 SKOK */
+/* SKOK */
 function jump(){
   if(jumping) return;
 
@@ -303,8 +269,6 @@ function jump(){
 
     ball.style.bottom=y+"px";
 
-    spawnTrail();
-
   },16);
 
   spawnFloat(mult + rebirths);
@@ -312,21 +276,6 @@ function jump(){
 }
 
 document.body.onclick=jump;
-
-/* TRAIL */
-function spawnTrail(){
-  const t=document.createElement("div");
-  t.className="trail";
-
-  const rect=ball.getBoundingClientRect();
-
-  t.style.left=rect.left+rect.width/2+"px";
-  t.style.top=rect.top+rect.height/2+"px";
-
-  document.body.appendChild(t);
-
-  setTimeout(()=>t.remove(),400);
-}
 
 /* FLOAT */
 function spawnFloat(value){
@@ -371,7 +320,6 @@ function updateUI(){
   countEl.textContent=count;
 }
 
-/* BALL */
 function updateBall(){
   ball.style.background =
     rebirths===0?"gray":
@@ -379,6 +327,12 @@ function updateBall(){
     rebirths===2?"#00ff88":
     rebirths===3?"#ffcc00":
     rebirths===4?"#ff4d4d":"gold";
+}
+
+/* SAVE */
+async function save(){
+  if(!userRef) return;
+  await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
 
 /* SHOP */
@@ -403,7 +357,6 @@ function updateShop(){
   });
 }
 
-/* AUTO / TURBO */
 function startAuto(){
   setInterval(()=>{ if(!jumping) jump(); },1500);
 }
@@ -411,6 +364,81 @@ function startAuto(){
 function startTurbo(){
   setInterval(()=>{ if(!jumping) jump(); },700);
 }
+
+/* RANK */
+function loadRank(){
+  const q=query(collection(db,"users"),orderBy("count","desc"),limit(10));
+
+  onSnapshot(q,(snap)=>{
+    const list=document.getElementById("list");
+    let i=1;
+
+    snap.forEach(d=>{
+      let li=list.children[i-1] || document.createElement("li");
+      list.appendChild(li);
+
+      li.textContent=`${i}. ${d.data().name||"Gracz"} - ${d.data().count||0}`;
+      i++;
+    });
+  });
+}
+
+/* SHOP BUTTONS */
+window.buy2=()=>{ if(step!==0||count<100)return; count-=100; mult=2; step=1; updateShop(); save(); };
+window.buyAuto=()=>{ if(step!==1||count<300)return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
+window.buy3=()=>{ if(step!==2||count<600)return; count-=600; mult=3; step=3; updateShop(); save(); };
+window.buyTurbo=()=>{ if(step!==3||count<1000)return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
+window.rebirth=()=>{ if(step!==4||count<10000)return;
+rebirths++; count=0; mult=1; auto=false; turbo=false; step=0;
+updateBall(); updateShop(); save(); location.reload();
+};
+</script>
+
+<!-- 🌌 BACKGROUND STARS -->
+<script>
+const canvas=document.getElementById("bg");
+const ctx=canvas.getContext("2d");
+
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+
+const stars=[];
+
+for(let i=0;i<120;i++){
+  stars.push({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    r:Math.random()*2,
+    speed:Math.random()*0.5+0.1
+  });
+}
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(let s of stars){
+    s.y+=s.speed;
+
+    if(s.y>canvas.height){
+      s.y=0;
+      s.x=Math.random()*canvas.width;
+    }
+
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle="rgba(255,255,255,0.6)";
+    ctx.fill();
+  }
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+window.addEventListener("resize",()=>{
+  canvas.width=innerWidth;
+  canvas.height=innerHeight;
+});
 </script>
 
 </body>
