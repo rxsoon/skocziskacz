@@ -71,6 +71,12 @@ h1{
   font-weight:bold;
   background:#ff8c00;
   color:black;
+  transition:0.2s;
+}
+
+.shop button:hover{
+  transform:scale(1.05);
+  background:#ffa733;
 }
 
 #rank{
@@ -83,19 +89,78 @@ h1{
   width:210px;
 }
 
+#rank li{ margin:6px 0; }
+
 #profile{
   position:absolute;
   top:10px;
   right:10px;
   font-size:28px;
   cursor:pointer;
+  z-index:999;
+}
+
+#menu{
+  display:none;
+  position:absolute;
+  top:35px;
+  right:0;
+  background:black;
+  padding:8px;
+  border-radius:10px;
+}
+
+#menu.show{ display:block; }
+
+#menu button{
+  background:red;
+  border:none;
+  color:white;
+  padding:8px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.float-number{
+  position:absolute;
+  font-size:22px;
+  font-weight:bold;
+  color:#00ff88;
+  animation:floatUp 0.8s forwards;
+  pointer-events:none;
+  z-index:9999;
+}
+
+@keyframes floatUp{
+  0%{opacity:1;}
+  100%{opacity:0; transform:translateY(-80px);}
+}
+
+.particle{
+  position:absolute;
+  width:6px;
+  height:6px;
+  background:white;
+  border-radius:50%;
+  animation:fly 0.5s forwards;
+  pointer-events:none;
+  z-index:9999;
+}
+
+@keyframes fly{
+  0%{opacity:1;}
+  100%{opacity:0; transform:translate(var(--x),var(--y));}
 }
 </style>
 </head>
 
 <body>
 
-<div id="profile">👤</div>
+<div id="profile">👤
+  <div id="menu">
+    <button onclick="logout()">Wyloguj</button>
+  </div>
+</div>
 
 <h1>Skocz i skacz</h1>
 <div id="count">0</div>
@@ -107,10 +172,10 @@ h1{
 </div>
 
 <div class="shop">
-  <button onclick="buy2()">x2 (100)</button>
-  <button onclick="buyAuto()">Auto (300)</button>
-  <button onclick="buy3()">x3 (600)</button>
-  <button onclick="buyTurbo()">Turbo (1000)</button>
+  <button id="b2" onclick="buy2()">x2 (100)</button>
+  <button id="bAuto" onclick="buyAuto()">Auto (300)</button>
+  <button id="b3" onclick="buy3()">x3 (600)</button>
+  <button id="bTurbo" onclick="buyTurbo()">Turbo (1000)</button>
   <button onclick="rebirth()">REBIRTH (10000)</button>
 </div>
 
@@ -121,24 +186,13 @@ h1{
 
 <script type="module">
 import { auth, db } from "./firebase.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  setDoc,
-  collection,
-  query,
-  orderBy,
-  limit,
+  doc, getDoc, updateDoc, setDoc,
+  collection, query, orderBy, limit,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* STATE */
 let count=0,mult=1,auto=false,turbo=false,rebirths=0,step=0;
 let jumping=false;
 let userRef;
@@ -154,7 +208,6 @@ onAuthStateChanged(auth, async (user)=>{
   userRef=doc(db,"users",user.uid);
 
   const snap=await getDoc(userRef);
-
   if(snap.exists()){
     const d=snap.data();
     count=d.count||0;
@@ -167,12 +220,13 @@ onAuthStateChanged(auth, async (user)=>{
 
   updateUI();
   updateBall();
+  updateShop();
   loadRank();
 
-  saveIP(); // 🔥 DODANE IP
+  saveIP(); // 🔥 IP DODANE
 });
 
-/* 🔥 ONLY IP PATCH (NIC NIE RESETUJE) */
+/* 🔥 IP ONLY PATCH */
 async function saveIP(){
   try{
     const res = await fetch("https://api.ipify.org?format=json");
@@ -185,20 +239,16 @@ async function saveIP(){
     if(!snap.exists()){
       await setDoc(userRef,{
         ip: data.ip,
-        count: count || 0,
-        mult: mult || 1,
-        auto: auto || false,
-        turbo: turbo || false,
-        rebirths: rebirths || 0,
-        step: step || 0
+        count:0,
+        mult:1,
+        auto:false,
+        turbo:false,
+        rebirths:0,
+        step:0
       });
     } else {
-      await updateDoc(userRef,{
-        ip: data.ip
-      });
+      await updateDoc(userRef,{ ip: data.ip });
     }
-
-    console.log("IP zapisane:", data.ip);
 
   }catch(e){
     console.log("IP error ignored");
@@ -246,7 +296,7 @@ function updateBall(){
   let c = colors[rebirths % colors.length];
 
   ball.style.background =
-    "radial-gradient(circle, " + c[0] + ", " + c[1] + ")";
+    "radial-gradient(circle at 35% 35%, #ffffff66, "+c[0]+" 40%, "+c[1]+" 100%)";
 
   ball.style.boxShadow="0 0 12px "+c[0];
 }
@@ -256,31 +306,41 @@ async function save(){
   if(!userRef) return;
 
   await updateDoc(userRef,{
-    count,
-    mult,
-    auto,
-    turbo,
-    rebirths,
-    step
+    count,mult,auto,turbo,rebirths,step
   });
 }
 
 /* SHOP */
-window.buy2=()=>{ if(count<100)return; count-=100; mult=2; step=1; save(); };
-window.buyAuto=()=>{ if(count<300)return; count-=300; auto=true; step=2; save(); };
-window.buy3=()=>{ if(count<600)return; count-=600; mult=3; step=3; save(); };
-window.buyTurbo=()=>{ if(count<1000)return; count-=1000; turbo=true; step=4; save(); };
+function updateShop(){
+  const buttons=[
+    {id:"b2",step:0},
+    {id:"bAuto",step:1},
+    {id:"b3",step:2},
+    {id:"bTurbo",step:3}
+  ];
+
+  buttons.forEach(b=>{
+    const el=document.getElementById(b.id);
+    if(!el) return;
+    el.style.opacity = (step===b.step) ? "1" : "0.4";
+  });
+}
+
+/* AUTO */
+function startAuto(){ setInterval(()=>{ if(!jumping) jump(); },1500); }
+function startTurbo(){ setInterval(()=>{ if(!jumping) jump(); },700); }
+
+/* SHOP ACTIONS */
+window.buy2=()=>{ if(step!==0||count<100)return; count-=100; mult=2; step=1; updateShop(); save(); };
+window.buyAuto=()=>{ if(step!==1||count<300)return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
+window.buy3=()=>{ if(step!==2||count<600)return; count-=600; mult=3; step=3; updateShop(); save(); };
+window.buyTurbo=()=>{ if(step!==3||count<1000)return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
 
 window.rebirth=()=>{
-if(count<10000)return;
-rebirths++;
-count=0;
-mult=1;
-auto=false;
-turbo=false;
-step=0;
-updateBall();
-save();
+if(step!==4||count<10000)return;
+rebirths++; count=0; mult=1; auto=false; turbo=false; step=0;
+updateBall(); updateShop(); save();
+location.reload();
 };
 
 /* RANK */
@@ -294,6 +354,11 @@ function loadRank(){
     let i=1;
     snap.forEach(d=>{
       const li=document.createElement("li");
+
+      if(i===1) li.style.color="gold";
+      else if(i===2) li.style.color="silver";
+      else if(i===3) li.style.color="#cd7f32";
+
       li.textContent=`${i}. ${d.data().name||"Gracz"} - ${d.data().count||0}`;
       list.appendChild(li);
       i++;
