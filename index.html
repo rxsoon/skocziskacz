@@ -5,7 +5,6 @@
 <title>Skocz i skacz</title>
 
 <style>
-
 body{
   margin:0;
   height:100vh;
@@ -14,7 +13,7 @@ body{
   color:white;
   overflow:hidden;
   display:none;
-  position:relative; /* 🔥 FIX */
+  position:relative;
 }
 
 h1{
@@ -178,20 +177,6 @@ h1{
   100%{opacity:0; transform:translate(var(--x), var(--y));}
 }
 
-/* SHAKE FIX (na scene zamiast body) */
-.shake{
-  animation:shake 0.2s;
-}
-
-@keyframes shake{
-  0%{transform:translate(-50%,-50%);}
-  25%{transform:translate(calc(-50% + 3px),calc(-50% - 3px));}
-  50%{transform:translate(calc(-50% - 3px),calc(-50% + 3px));}
-  75%{transform:translate(calc(-50% + 3px),calc(-50% + 3px));}
-  100%{transform:translate(-50%,-50%);}
-}
-
-/* PULSE */
 .pulse{
   animation:pulse 0.2s;
 }
@@ -239,7 +224,26 @@ h1{
 <script type="module">
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { doc, getDoc, updateDoc, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  doc, getDoc, updateDoc,
+  collection, query, orderBy, limit,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* GLOBAL STATE */
+let count=0;
+let mult=1;
+let auto=false;
+let turbo=false;
+let rebirths=0;
+let step=0;
+
+let jumping=false;
+let userRef;
+
+const ball=document.getElementById("ball");
+const countEl=document.getElementById("count");
+const scene=document.querySelector(".scene");
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
@@ -273,24 +277,6 @@ onAuthStateChanged(auth, async (user)=>{
   if(turbo) startTurbo();
 });
 
-/* GAME */
-let count=0;
-let mult=1;
-let auto=false;
-let turbo=false;
-let rebirths=0;
-let step=0;
-
-let jumping=false;
-let userRef;
-
-let autoInterval=null;
-let turboInterval=null;
-
-const ball=document.getElementById("ball");
-const countEl=document.getElementById("count");
-const scene=document.querySelector(".scene");
-
 /* JUMP */
 function jump(){
   if(jumping) return;
@@ -305,15 +291,12 @@ function jump(){
   ball.classList.add("jump");
   ball.classList.add("pulse");
 
-  scene.classList.add("shake");
-
   spawnFloat(mult + rebirths);
   spawnParticles();
 
   setTimeout(()=>{
     ball.classList.remove("jump");
     ball.classList.remove("pulse");
-    scene.classList.remove("shake");
     jumping=false;
   },500);
 }
@@ -365,11 +348,10 @@ function updateUI(){
 }
 
 function updateBall(){
-  if(rebirths === 0) ball.style.background="gray";
-  else if(rebirths === 1) ball.style.background="#4da3ff";
-  else if(rebirths === 2) ball.style.background="#00ff88";
-  else if(rebirths === 3) ball.style.background="#ffcc00";
-  else if(rebirths === 4) ball.style.background="#ff4d4d";
+  if(rebirths===0) ball.style.background="gray";
+  else if(rebirths===1) ball.style.background="#4da3ff";
+  else if(rebirths===2) ball.style.background="#00ff88";
+  else if(rebirths===3) ball.style.background="#ffcc00";
   else ball.style.background="gold";
 }
 
@@ -379,24 +361,45 @@ async function save(){
   await updateDoc(userRef,{count,mult,auto,turbo,rebirths,step});
 }
 
-/* SHOP */
-window.buy2=()=>{ if(step!==0 || count<100) return; count-=100; mult=2; step=1; updateShop(); save(); };
-window.buyAuto=()=>{ if(step!==1 || count<300) return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
-window.buy3=()=>{ if(step!==2 || count<600) return; count-=600; mult=3; step=3; updateShop(); save(); };
-window.buyTurbo=()=>{ if(step!==3 || count<1000) return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
+/* SHOP FIX */
+function updateShop(){
+  const buttons=[
+    {id:"b2", step:0},
+    {id:"bAuto", step:1},
+    {id:"b3", step:2},
+    {id:"bTurbo", step:3}
+  ];
 
-window.rebirth=()=>{ if(step!==4 || count<10000) return; rebirths++; count=0; mult=1; auto=false; turbo=false; step=0; updateBall(); updateShop(); save(); location.reload(); };
+  buttons.forEach(b=>{
+    const el=document.getElementById(b.id);
+    if(!el) return;
 
-/* AUTO */
+    if(step===b.step){
+      el.className="active";
+      el.disabled=false;
+    } else {
+      el.className="locked";
+      el.disabled=true;
+    }
+  });
+}
+
+/* AUTOS */
 function startAuto(){
-  if(autoInterval) return;
-  autoInterval=setInterval(()=>{ if(!jumping) jump(); },1500);
+  setInterval(()=>{ if(!jumping) jump(); },1500);
 }
 
 function startTurbo(){
-  if(turboInterval) return;
-  turboInterval=setInterval(()=>{ if(!jumping) jump(); },700);
+  setInterval(()=>{ if(!jumping) jump(); },700);
 }
+
+/* SHOP ACTIONS */
+window.buy2=()=>{ if(step!==0||count<100) return; count-=100; mult=2; step=1; updateShop(); save(); };
+window.buyAuto=()=>{ if(step!==1||count<300) return; count-=300; auto=true; step=2; startAuto(); updateShop(); save(); };
+window.buy3=()=>{ if(step!==2||count<600) return; count-=600; mult=3; step=3; updateShop(); save(); };
+window.buyTurbo=()=>{ if(step!==3||count<1000) return; count-=1000; turbo=true; step=4; startTurbo(); updateShop(); save(); };
+
+window.rebirth=()=>{ if(step!==4||count<10000) return; rebirths++; count=0; mult=1; auto=false; turbo=false; step=0; updateBall(); updateShop(); save(); location.reload(); };
 
 /* RANK */
 function loadRank(){
@@ -404,19 +407,16 @@ function loadRank(){
 
   onSnapshot(q,(snap)=>{
     const list=document.getElementById("list");
-
     let i=1;
+
+    list.innerHTML="";
 
     snap.forEach(d=>{
       const data=d.data();
-      let li=list.children[i-1];
-
-      if(!li){
-        li=document.createElement("li");
-        list.appendChild(li);
-      }
+      const li=document.createElement("li");
 
       li.textContent=`${i}. ${data.name||"Gracz"} - ${data.count||0}`;
+      list.appendChild(li);
       i++;
     });
   });
